@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toto Jump - Le Jeu</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 3px 3px 6px rgba(255,255,255,0.8);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .game-container {
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #90EE90 70%, #228B22 100%);
+            border: 3px solid #333;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background: linear-gradient(to bottom, #8B4513, #654321);
+            border-top: 2px solid #A0522D;
+        }
+
+        .toto {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            width: 40px;
+            height: 60px;
+            background: #FFE4B5;
+            border: 2px solid #333;
+            border-radius: 20px 20px 10px 10px;
+            z-index: 10;
+            transition: none;
+        }
+
+        .toto.jumping {
+            animation: jump 0.6s ease-in-out;
+        }
+
+        @keyframes jump {
+            0% { bottom: 50px; }
+            50% { bottom: 180px; }
+            100% { bottom: 50px; }
+        }
+
+        .toto::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 8px;
+            width: 6px;
+            height: 6px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: 16px 0 0 #333;
+        }
+
+        .toto::after {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 12px;
+            width: 16px;
+            height: 8px;
+            background: #333;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .obstacle {
+            position: absolute;
+            bottom: 50px;
+            width: 60px;
+            height: 80px;
+        }
+
+        .piscine {
+            background: #1E90FF;
+            border: 3px solid #4169E1;
+            border-radius: 10px;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.3);
+            height: 40px;
+            bottom: 30px;
+        }
+
+            .voiture {
+        position: absolute;
+        background: #FF4500;
+        border: 2px solid #B22222;
+        border-radius: 10px 10px 2px 2px;
+        height: 40px;
+        width: 60px;
+        bottom: 50px;
+        box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+
+        .voiture::before {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            left: 6px;
+            width: 14px;
+            height: 14px;
+            background: #333;
+            border-radius: 50%;
+            box-shadow: 34px 0 0 #333; /* roue avant + arrière */
+        }
+
+        .voiture::after {
+            content: '';
+            position: absolute;
+            top: -18px;
+            left: 8px;
+            width: 44px;
+            height: 20px;
+            background: #FF6347;
+            border-radius: 5px 5px 0 0;
+            border: 2px solid #B22222;
+        }
+
+        .voiture .pare-brise {
+            position: absolute;
+            top: -14px;
+            left: 16px;
+            width: 28px;
+            height: 12px;
+            background: lightblue;
+            border-radius: 2px;
+            border: 1px solid #333;
+        }
+        .maison {
+            background: #D2691E;
+            border: 2px solid #8B4513;
+            height: 70px;
+            bottom: 50px;
+        }
+
+        .maison::before {
+            content: '';
+            position: absolute;
+            top: -25px;
+            left: -5px;
+            width: 0;
+            height: 0;
+            border-left: 35px solid transparent;
+            border-right: 35px solid transparent;
+            border-bottom: 25px solid #8B0000;
+        }
+
+        .maison::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 15px;
+            height: 15px;
+            background: #87CEEB;
+            border: 1px solid #333;
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 100;
+        }
+
+        .game-over h2 {
+            color: #FF4500;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .game-over p {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .restart-btn {
+            background: #32CD32;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .restart-btn:hover {
+            background: #228B22;
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #333;
+            max-width: 250px;
+        }
+
+        .clouds {
+            position: absolute;
+            top: 30px;
+            width: 60px;
+            height: 20px;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.8;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .clouds::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .clouds::after {
+            content: '';
+            position: absolute;
+            top: -15px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateX(0px) translateY(0px); }
+            50% { transform: translateX(20px) translateY(-10px); }
+        }
+
+        .start-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .start-btn {
+            background: #32CD32;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+            margin-top: 15px;
+        }
+
+        .start-btn:hover {
+            background: #228B22;
+        }
+    </style>
+</head>
+<body>
+            <div class="game-title">C'est Toto qui court...</div>
+        <div class="game-container">
+        <div class="clouds" style="left: 200px; animation-delay: 0s;"></div>
+        <div class="clouds" style="left: 400px; animation-delay: 2s;"></div>
+        <div class="clouds" style="left: 600px; animation-delay: 4s;"></div>
+        
+        <div class="instructions">
+            <strong>Comment jouer :</strong><br>
+            • Appuyez sur ESPACE ou cliquez pour faire sauter Toto<br>
+            • Évitez les obstacles : piscine, voiture, maison<br>
+            • Survivez le plus longtemps possible !
+        </div>
+        
+        <div class="score">Score: <span id="scoreValue">0</span></div>
+        
+        <div class="toto" id="toto"></div>
+        <div class="ground"></div>
+        
+        <div class="start-message" id="startMessage">
+            <h2>Toto Jump!</h2>
+            <p>Aide Toto à éviter les obstacles !</p>
+            <button class="start-btn" onclick="startGame()">Commencer</button>
+        </div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <p id="deathMessage">Toto s'est pris un obstacle ! 😵</p>
+            <p>Score final: <span id="finalScore">0</span></p>
+            <button class="restart-btn" onclick="restartGame()">Recommencer</button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            isRunning: false,
+            isJumping: false,
+            score: 0,
+            obstacles: [],
+            gameSpeed: 2,
+            spawnRate: 0.008,
+            lastObstacleX: 800
+        };
+
+        let toto = document.getElementById('toto');
+        let gameContainer = document.querySelector('.game-container');
+        let scoreElement = document.getElementById('scoreValue');
+        let gameOverElement = document.getElementById('gameOver');
+        let startMessageElement = document.getElementById('startMessage');
+        let finalScoreElement = document.getElementById('finalScore');
+        let deathMessageElement = document.getElementById('deathMessage');
+
+        let animationId;
+
+        // Types d'obstacles avec leurs propriétés
+        const obstacleTypes = [
+            { class: 'piscine', width: 80, height: 40 },
+            { class: 'voiture', width: 60, height: 40 },
+            { class: 'maison', width: 60, height: 70 }
+        ];
+
+        function jump() {
+            if (!gameState.isJumping && gameState.isRunning) {
+                gameState.isJumping = true;
+                toto.classList.add('jumping');
+                
+                setTimeout(() => {
+                    toto.classList.remove('jumping');
+                    gameState.isJumping = false;
+                }, 600);
+            }
+        }
+
+        function createObstacle() {
+            const obstacleType = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+
+            const obstacle = {
+                element: document.createElement('div'),
+                x: 800,
+                width: obstacleType.width,
+                height: obstacleType.height,
+                type: obstacleType.class
+            };
+            
+            obstacle.element.className = `obstacle ${obstacle.type}`;
+            obstacle.element.style.left = obstacle.x + 'px';
+            
+            gameContainer.appendChild(obstacle.element);
+            gameState.obstacles.push(obstacle);
+        }
+
+        function updateObstacles() {
+            for (let i = gameState.obstacles.length - 1; i >= 0; i--) {
+                const obstacle = gameState.obstacles[i];
+                obstacle.x -= gameState.gameSpeed;
+                obstacle.element.style.left = obstacle.x + 'px';
+                
+                // Supprimer les obstacles hors écran
+                if (obstacle.x < -obstacle.width) {
+                    obstacle.element.remove();
+                    gameState.obstacles.splice(i, 1);
+                    gameState.score += 10;
+                    scoreElement.textContent = gameState.score;
+                }
+            }
+        }
+
+        function checkCollisions() {
+            const totoRect = {
+                x: 50,
+                y: gameState.isJumping ? 180 : 50,
+                width: 40,
+                height: 60
+            };
+
+            for (let obstacle of gameState.obstacles) {
+                let obstacleY = 50;
+                if (obstacle.type === 'piscine') {
+                    obstacleY = 30; // Piscine au niveau du sol
+                }
+                
+                const obstacleRect = {
+                    x: obstacle.x,
+                    y: obstacleY,
+                    width: obstacle.width,
+                    height: obstacle.height
+                };
+
+                if (totoRect.x < obstacleRect.x + obstacleRect.width &&
+                    totoRect.x + totoRect.width > obstacleRect.x &&
+                    totoRect.y < obstacleRect.y + obstacleRect.height &&
+                    totoRect.y + totoRect.height > obstacleRect.y) {
+                    gameOver(obstacle.type);
+                    return;
+                }
+            }
+        }
+
+        function spawnObstacle() {
+            // Vérifier qu'il n'y a pas d'obstacle trop proche
+            const minDistance = 200; // Distance minimale entre obstacles
+            let canSpawn = true;
+            
+            // Vérifier si le dernier obstacle est assez loin
+            if (gameState.obstacles.length > 0) {
+                const lastObstacle = gameState.obstacles[gameState.obstacles.length - 1];
+                if (lastObstacle.x > 800 - minDistance) {
+                    canSpawn = false;
+                }
+            }
+            
+            if (canSpawn && Math.random() < gameState.spawnRate) {
+                createObstacle();
+            }
+        }
+
+        function increaseDifficulty() {
+            if (gameState.score > 0 && gameState.score % 300 === 0) {
+                gameState.gameSpeed += 0.3;
+                if (gameState.spawnRate < 0.015) {
+                    gameState.spawnRate += 0.002;
+                }
+            }
+        }
+
+        function gameLoop() {
+            if (!gameState.isRunning) return;
+
+            updateObstacles();
+            checkCollisions();
+            spawnObstacle();
+            increaseDifficulty();
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            gameState.isRunning = true;
+            gameState.score = 0;
+            gameState.gameSpeed = 2;
+            gameState.spawnRate = 0.008;
+            gameState.lastObstacleX = 800;
+            
+            startMessageElement.style.display = 'none';
+            gameOverElement.style.display = 'none';
+            scoreElement.textContent = '0';
+            
+            gameLoop();
+        }
+
+        function gameOver(obstacleType) {
+            gameState.isRunning = false;
+            cancelAnimationFrame(animationId);
+            
+            // Messages personnalisés selon l'obstacle
+            let deathMessage = "Toto s'est pris un obstacle ! 😵";
+            switch(obstacleType) {
+                case 'piscine':
+                    deathMessage = "C'est Toto qui court dans la piscine ! 🏊‍♂️";
+                    break;
+                case 'voiture':
+                    deathMessage = "C'est Toto qui court dans la voiture ! 🚗";
+                    break;
+                case 'maison':
+                    deathMessage = "C'est Toto qui court dans la maison ! 🏠";
+                    break;
+            }
+            
+            deathMessageElement.textContent = deathMessage;
+            finalScoreElement.textContent = gameState.score;
+            gameOverElement.style.display = 'block';
+        }
+
+        function restartGame() {
+            // Nettoyer tous les obstacles
+            gameState.obstacles.forEach(obstacle => {
+                obstacle.element.remove();
+            });
+            gameState.obstacles = [];
+            
+            // Réinitialiser Toto
+            toto.classList.remove('jumping');
+            gameState.isJumping = false;
+            
+            startGame();
+        }
+
+        // Contrôles
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+        });
+
+        gameContainer.addEventListener('click', jump);
+
+        // Empêcher le scroll avec la barre espace
+        window.addEventListener('keydown', function(e) {
+            if(e.keyCode === 32 && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
