@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Toto Jump - Le Jeu</title>
+    <title>Toto Qui Court</title>
     <style>
         * {
             margin: 0;
@@ -61,17 +61,17 @@
             border: 2px solid #333;
             border-radius: 20px 20px 10px 10px;
             z-index: 10;
-            transition: none;
+            /* Suppression de la transition pour éviter les conflits */
         }
 
         .toto.jumping {
-            animation: jump 0.6s ease-in-out;
+            animation: jump 0.7s ease-in-out;
         }
 
         @keyframes jump {
-            0% { bottom: 50px; }
-            50% { bottom: 180px; }
-            100% { bottom: 50px; }
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-180px); }
+            100% { transform: translateY(0); }
         }
 
         .toto::before {
@@ -102,6 +102,8 @@
             bottom: 50px;
             width: 60px;
             height: 80px;
+            /* Optimisation pour les performances */
+            will-change: transform;
         }
 
         .piscine {
@@ -113,15 +115,15 @@
             bottom: 30px;
         }
 
-            .voiture {
-        position: absolute;
-        background: #FF4500;
-        border: 2px solid #B22222;
-        border-radius: 10px 10px 2px 2px;
-        height: 40px;
-        width: 60px;
-        bottom: 50px;
-        box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        .voiture {
+            position: absolute;
+            background: #FF4500;
+            border: 2px solid #B22222;
+            border-radius: 10px 10px 2px 2px;
+            height: 40px;
+            width: 60px;
+            bottom: 50px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
         }
 
         .voiture::before {
@@ -133,7 +135,7 @@
             height: 14px;
             background: #333;
             border-radius: 50%;
-            box-shadow: 34px 0 0 #333; /* roue avant + arrière */
+            box-shadow: 34px 0 0 #333;
         }
 
         .voiture::after {
@@ -158,6 +160,7 @@
             border-radius: 2px;
             border: 1px solid #333;
         }
+
         .maison {
             background: #D2691E;
             border: 2px solid #8B4513;
@@ -322,15 +325,15 @@
     </style>
 </head>
 <body>
-            <div class="game-title">C'est Toto qui court...</div>
-        <div class="game-container">
+    <div class="game-title">C'est Toto qui court...</div>
+    <div class="game-container">
         <div class="clouds" style="left: 200px; animation-delay: 0s;"></div>
         <div class="clouds" style="left: 400px; animation-delay: 2s;"></div>
         <div class="clouds" style="left: 600px; animation-delay: 4s;"></div>
         
         <div class="instructions">
             <strong>Comment jouer :</strong><br>
-            • Appuyez sur ESPACE ou cliquez pour faire sauter Toto<br>
+            • Appuyez sur ESPACE pour faire sauter Toto<br>
             • Évitez les obstacles : piscine, voiture, maison<br>
             • Survivez le plus longtemps possible !
         </div>
@@ -341,8 +344,7 @@
         <div class="ground"></div>
         
         <div class="start-message" id="startMessage">
-            <h2>Toto Jump!</h2>
-            <p>Aide Toto à éviter les obstacles !</p>
+            <h2>Aide Toto à éviter les obstacles !</h2>
             <button class="start-btn" onclick="startGame()">Commencer</button>
         </div>
         
@@ -360,9 +362,11 @@
             isJumping: false,
             score: 0,
             obstacles: [],
-            gameSpeed: 2,
+            gameSpeed: 5, // Vitesse augmentée de 3 à 5
             spawnRate: 0.008,
-            lastObstacleX: 800
+            lastObstacleX: 800,
+            jumpHeight: 0,
+            isInitialized: false
         };
 
         let toto = document.getElementById('toto');
@@ -374,6 +378,7 @@
         let deathMessageElement = document.getElementById('deathMessage');
 
         let animationId;
+        let lastTime = 0;
 
         // Types d'obstacles avec leurs propriétés
         const obstacleTypes = [
@@ -381,6 +386,16 @@
             { class: 'voiture', width: 60, height: 40 },
             { class: 'maison', width: 60, height: 70 }
         ];
+
+        // Initialisation du jeu avec délai pour éviter les problèmes de rendu
+        function initializeGame() {
+            if (!gameState.isInitialized) {
+                // Petit délai pour s'assurer que tous les éléments sont rendus
+                setTimeout(() => {
+                    gameState.isInitialized = true;
+                }, 100);
+            }
+        }
 
         function jump() {
             if (!gameState.isJumping && gameState.isRunning) {
@@ -390,7 +405,7 @@
                 setTimeout(() => {
                     toto.classList.remove('jumping');
                     gameState.isJumping = false;
-                }, 600);
+                }, 700); // Ajusté pour correspondre à l'animation CSS de 0.7s
             }
         }
 
@@ -407,16 +422,22 @@
             
             obstacle.element.className = `obstacle ${obstacle.type}`;
             obstacle.element.style.left = obstacle.x + 'px';
+            obstacle.element.style.willChange = 'transform'; // Optimisation GPU
             
             gameContainer.appendChild(obstacle.element);
             gameState.obstacles.push(obstacle);
         }
 
-        function updateObstacles() {
+        function updateObstacles(deltaTime) {
+            // Utilisation du deltaTime pour une vitesse constante
+            const moveDistance = gameState.gameSpeed * (deltaTime / 16); // Normalisation pour 60fps
+            
             for (let i = gameState.obstacles.length - 1; i >= 0; i--) {
                 const obstacle = gameState.obstacles[i];
-                obstacle.x -= gameState.gameSpeed;
-                obstacle.element.style.left = obstacle.x + 'px';
+                obstacle.x -= moveDistance;
+                
+                // Utilisation de transform pour de meilleures performances
+                obstacle.element.style.transform = `translateX(${obstacle.x - 800}px)`;
                 
                 // Supprimer les obstacles hors écran
                 if (obstacle.x < -obstacle.width) {
@@ -431,7 +452,7 @@
         function checkCollisions() {
             const totoRect = {
                 x: 50,
-                y: gameState.isJumping ? 180 : 50,
+                y: gameState.isJumping ? 50 - 180 : 50, // Hauteur ajustée
                 width: 40,
                 height: 60
             };
@@ -439,7 +460,7 @@
             for (let obstacle of gameState.obstacles) {
                 let obstacleY = 50;
                 if (obstacle.type === 'piscine') {
-                    obstacleY = 30; // Piscine au niveau du sol
+                    obstacleY = 30;
                 }
                 
                 const obstacleRect = {
@@ -460,11 +481,9 @@
         }
 
         function spawnObstacle() {
-            // Vérifier qu'il n'y a pas d'obstacle trop proche
-            const minDistance = 200; // Distance minimale entre obstacles
+            const minDistance = 250; // Distance minimale augmentée
             let canSpawn = true;
             
-            // Vérifier si le dernier obstacle est assez loin
             if (gameState.obstacles.length > 0) {
                 const lastObstacle = gameState.obstacles[gameState.obstacles.length - 1];
                 if (lastObstacle.x > 800 - minDistance) {
@@ -478,18 +497,21 @@
         }
 
         function increaseDifficulty() {
-            if (gameState.score > 0 && gameState.score % 300 === 0) {
-                gameState.gameSpeed += 0.3;
+            if (gameState.score > 0 && gameState.score % 20 === 0) {
+                gameState.gameSpeed += 0.001; // Augmentation plus rapide
                 if (gameState.spawnRate < 0.015) {
                     gameState.spawnRate += 0.002;
                 }
             }
         }
 
-        function gameLoop() {
-            if (!gameState.isRunning) return;
+        function gameLoop(currentTime) {
+            if (!gameState.isRunning || !gameState.isInitialized) return;
 
-            updateObstacles();
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            updateObstacles(deltaTime);
             checkCollisions();
             spawnObstacle();
             increaseDifficulty();
@@ -498,24 +520,31 @@
         }
 
         function startGame() {
+            initializeGame();
+            
             gameState.isRunning = true;
             gameState.score = 0;
-            gameState.gameSpeed = 2;
+            gameState.gameSpeed = 5;
             gameState.spawnRate = 0.008;
             gameState.lastObstacleX = 800;
+            lastTime = performance.now();
             
             startMessageElement.style.display = 'none';
             gameOverElement.style.display = 'none';
             scoreElement.textContent = '0';
             
-            gameLoop();
+            // Petit délai pour s'assurer que tout est prêt
+            setTimeout(() => {
+                animationId = requestAnimationFrame(gameLoop);
+            }, 50);
         }
 
         function gameOver(obstacleType) {
             gameState.isRunning = false;
-            cancelAnimationFrame(animationId);
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
             
-            // Messages personnalisés selon l'obstacle
             let deathMessage = "Toto s'est pris un obstacle ! 😵";
             switch(obstacleType) {
                 case 'piscine':
@@ -535,14 +564,13 @@
         }
 
         function restartGame() {
-            // Nettoyer tous les obstacles
             gameState.obstacles.forEach(obstacle => {
                 obstacle.element.remove();
             });
             gameState.obstacles = [];
             
-            // Réinitialiser Toto
             toto.classList.remove('jumping');
+            toto.style.transform = ''; // Reset transform
             gameState.isJumping = false;
             
             startGame();
@@ -558,12 +586,14 @@
 
         gameContainer.addEventListener('click', jump);
 
-        // Empêcher le scroll avec la barre espace
         window.addEventListener('keydown', function(e) {
             if(e.keyCode === 32 && e.target === document.body) {
                 e.preventDefault();
             }
         });
+
+        // Initialisation au chargement de la page
+        window.addEventListener('load', initializeGame);
     </script>
 </body>
 </html>
